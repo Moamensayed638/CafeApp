@@ -1,78 +1,101 @@
 import { useState } from "react";
-import { resetPassword } from "../services/auth.service";
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { resetPasswordAPI } from "../api/auth.api";
 
-export default function ResetPassword() {
-    const [form, setForm] = useState({
-        email: "",
-        token: "",
-        newPassword: "",
-    });
+const ResetPassword = () => {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-    const [msg, setMsg] = useState("");
-    const [loading, setLoading] = useState(false);
+  const email = searchParams.get("email");
+  const token = searchParams.get("token");
 
-    const handleChange = (e) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setMsg("");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setMessage("");
 
-        try {
-        await resetPassword(form);
-        setMsg("✅ Password reset successfully");
-        } catch {
-        setMsg("❌ Failed to reset password");
-        }
+    // 1. Validate link params
+    if (!email || !token) {
+      return setMessage("Invalid reset link ❌");
+    }
 
-        setLoading(false);
-    };
+    // 2. Validate inputs
+    if (!password || !confirmPassword) {
+      return setMessage("All fields are required ❌");
+    }
 
-    return (
-        <div className="h-screen flex items-center justify-center bg-gray-100">
-        <form
-            onSubmit={handleSubmit}
-            className="bg-white p-8 rounded-xl shadow w-350px"
+    // 3. Password match
+    if (password !== confirmPassword) {
+      return setMessage("Passwords do not match ❌");
+    }
+
+    // 4. Optional: password strength
+    if (password.length < 6) {
+      return setMessage("Password must be at least 6 characters ❌");
+    }
+
+    try {
+      setLoading(true);
+
+      await resetPasswordAPI({
+        email,
+        token,
+        newPassword: password,
+      });
+
+      setMessage("Password reset successfully ✅");
+
+      // redirect to login after 2 seconds
+      setTimeout(() => {
+        navigate("/login");
+      }, 2000);
+    } catch (err) {
+      setMessage(
+        err?.message || "Something went wrong while resetting password ❌"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-6 max-w-md mx-auto">
+      <h2 className="text-xl font-bold mb-4">Reset Password</h2>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <input
+          type="password"
+          placeholder="New Password"
+          className="border p-2 rounded"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+
+        <input
+          type="password"
+          placeholder="Confirm Password"
+          className="border p-2 rounded"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+        />
+
+        <button
+          disabled={loading}
+          className={`p-2 rounded text-white ${
+            loading ? "bg-gray-400" : "bg-green-500"
+          }`}
         >
-            <h2 className="text-xl font-bold text-center mb-4">
-            Reset Password
-            </h2>
+          {loading ? "Resetting..." : "Reset Password"}
+        </button>
+      </form>
 
-            <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            className="w-full p-3 border rounded mb-3"
-            onChange={handleChange}
-            required
-            />
+      {message && <p className="mt-3 text-sm">{message}</p>}
+    </div>
+  );
+};
 
-            <input
-            type="text"
-            name="token"
-            placeholder="Token"
-            className="w-full p-3 border rounded mb-3"
-            onChange={handleChange}
-            required
-            />
-
-            <input
-            type="password"
-            name="newPassword"
-            placeholder="New Password"
-            className="w-full p-3 border rounded mb-4"
-            onChange={handleChange}
-            required
-            />
-
-            <button className="w-full bg-green-600 text-white p-3 rounded">
-            {loading ? "Resetting..." : "Reset Password"}
-            </button>
-
-            {msg && <p className="text-center mt-4 text-sm">{msg}</p>}
-        </form>
-        </div>
-    );
-}
+export default ResetPassword;

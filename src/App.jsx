@@ -1,5 +1,16 @@
-import AppRouter from "./app/router";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ForgotPassword from "./features/auth/pages/ForgotPassword";
+import ResetPassword from "./features/auth/pages/ResetPassword";
 
-export default function App() {
-  return <AppRouter />;
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
+
+export default App;
